@@ -58,7 +58,7 @@ def PlayedRegularCard(table, played_card):
         if total > 11:
             return
         elif total == 11:
-            print('Found', candidates)
+            print('Found that adds to 11:', candidates)
             choices.append(candidates)
             return
         elif len(cards) == 0:
@@ -94,15 +94,28 @@ class GameState(object):
         self.hands = [set(), set()]
         self.tricks = [set(), set()]
 
+    def cards_to_str(self, cards):
+        format_string = ' '.join('{:3}' for i in range(len(cards)))
+        return format_string.format(*cards)
+
     def __str__(self):
-        deck = 'Deck: ' + ' '.join(self.deck)
-        table = 'Table: ' + ' '.join(sorted(self.table))
-        hand1 = 'Hand1: ' + ' '.join(sorted(self.hands[0]))
-        trick1 = 'Trick1: ' + ' '.join(sorted(self.tricks[0]))
-        hand2 = 'Hand2: ' + ' '.join(sorted(self.hands[1]))
-        trick2 = 'Trick2: ' + ' '.join(sorted(self.tricks[1]))
-        return '{}\n{}\n{}\n{}\n{}\n{}'.format(deck, table, hand1, trick1, hand2,
-                                       trick2)
+        #deck   = ' '.join(self.deck)
+        #table  = ' '.join(sorted(self.table))
+        #hand1  = ' '.join(sorted(self.hands[0]))
+        #trick1 = ' '.join(sorted(self.tricks[0]))
+        #hand2  = ' '.join(sorted(self.hands[1]))
+        #trick2 = ' '.join(sorted(self.tricks[1]))
+        deck   = self.cards_to_str(self.deck)
+        table  = self.cards_to_str(self.table)
+        hand1  = self.cards_to_str(self.hands[0])
+        trick1 = self.cards_to_str(self.tricks[0])
+        hand2  = self.cards_to_str(self.hands[1])
+        trick2 = self.cards_to_str(self.tricks[1])
+        return '''Deck :{}
+Table:  {}
+Hand-1: {:16} |  Score: {:2d} |  Taken-1: {}
+Hand-2: {:16} |  Score: {:2d} |  Taken-2: {}'''.format(
+    deck, table, hand1, self.score(0), trick1, hand2,  self.score(1), trick2)
 
     def deal(self, destination):
         for i in range(4):
@@ -176,9 +189,9 @@ def main():
     pass
 
 def get_played_card(state, player):
-    print('Table: ' + ' '.join(sorted(list(state.table))))
+    print('Table: ' + state.cards_to_str(state.table))
     cards = sorted(list(state.hands[player]))
-    print('Player {}, choose:'.format(player))
+    print('Player {}, choose [0-{}]:'.format(player+1, len(cards)-1))
     for i in range(len(cards)):
         print('{}: {}'.format(i, cards[i]))
 
@@ -197,17 +210,17 @@ def play_round( state, start_player ):
     while (len(state.hands[0]) > 0) or (len(state.hands[1]) > 0):
         print(state)
 
-        print('\nPlayer {} turn'.format(player))
+        print('\n*** Player {} turn'.format(player+1))
         played_card = get_played_card(state, player)
         if played_card == 'quit':
-            break
+            return False
 
         choices = state.play(player, played_card)
 
         if len(choices) > 0:
             index = 0
             if len(choices) > 1:
-                print('Which choice?')
+                print('Which choice [0-{}]?'.format(len(choices)-1))
                 for idx in range(len(choices)):
                     print('{}: {}'.format(idx, choices[idx]))
 
@@ -215,6 +228,8 @@ def play_round( state, start_player ):
                 index = int(input())
                 if(index < 0):
                     break
+            else:
+                print('Only one choice, using that =)')
 
             state.apply_choice( player, choices[index] )
         else:
@@ -225,16 +240,30 @@ def play_round( state, start_player ):
         if len(state.hands[player]) == 0:
             player = (player+1)%2
 
+    return True
+
 if __name__ == "__main__":
+    print('''FourCard
+A fascinating game! Soon, it will be UR10 automated!
+
+To quit, use -1 as a choice at any prompt
+
+Good luck...''')
+
     state = GameState()
 
     # Initialize the board
     state.deal( state.table )
 
     # Play out the deck
+    round = 1
     while len(state.deck) > 0:
+        print('========== PLAYING ROUND {} ============'.format(round))
         state.new_deal()
-        play_round( state, 0 )
+        if not play_round( state, 0 ):
+            break
+        round += 1
+
     print()
     print('Player 1 score:', state.score(0))
     print('Player 2 score:', state.score(1))
